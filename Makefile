@@ -3,7 +3,7 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
 REQUIRED_PACKAGES = daemontools-run ucspi-tcp python python-dev
-REQUIRED_PIP = pytest Twisted hexdump ujson simplejson requests pytz tzlocal ../IbPy/dist/*.tar.gz
+REQUIRED_PIP = pytest Twisted hexdump git+git://github.com/rstms/ultrajson.git simplejson requests pytz tzlocal
 PROJECT_PIP = ./dist/*.tar.gz
 
 #PYTHON = /usr/bin/python
@@ -42,11 +42,14 @@ build:  .make-build
 
 config: .make-config
 
+#&& echo verified package $$package || (echo missing package $$package; false);
+
 .make-config:
 	@echo "Configuring..."
 	@getent >/dev/null passwd txtrader && echo "User txtrader exists." || adduser --gecos "" --home / --shell /bin/false --no-create-home --disabled-login txtrader
-	@for package in $(REQUIRED_PACKAGES); do \
-	  dpkg-query >/dev/null -l $$package && echo "verified package $$package" || break;\
+	@set -e;\
+        for package in $(REQUIRED_PACKAGES); do \
+	  dpkg-query >/dev/null -l $$package || false;\
 	done;
 	echo $(VENV)>etc/txtrader/TXTRADER_VENV
 	mkdir -p $(ENVDIR)
@@ -106,7 +109,7 @@ install: build .make-venv config
 	sudo touch /var/svc.d/txtrader/down
 	sudo chown -R root.root /var/svc.d/txtrader
 	sudo chown root.txtrader /var/svc.d/txtrader
-	sudo chown root.txtrader /var/svc.d/txtrader/*.tac
+	sudo chown root.txtrader /var/svc.d/txtrader/txtrader.tac
 	sudo update-service --add /var/svc.d/txtrader
 
 start:
