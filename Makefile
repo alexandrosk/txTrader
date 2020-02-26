@@ -21,7 +21,7 @@ TEST_PORT = 51070
 TEST_ACCOUNT = $$(cat etc/txtrader/TXTRADER_API_ACCOUNT)
 
 default:
-	@echo "\nQuick Start Commands:\n\nsudo make clean && sudo make config && make build && make venv && make install && make run\n"
+	@echo "\nQuick Start Commands:\n\nsudo make clean && make config && make build && make venv && make install && make run\n"
 
 clean:
 	@echo "Cleaning up..."
@@ -42,21 +42,19 @@ build:  .make-build
 
 config: .make-config
 
-#&& echo verified package $$package || (echo missing package $$package; false);
-
 .make-config:
 	@echo "Configuring..."
-	@getent >/dev/null passwd txtrader && echo "User txtrader exists." || adduser --gecos "" --home / --shell /bin/false --no-create-home --disabled-login txtrader
+	@getent >/dev/null passwd txtrader && echo "User txtrader exists." || sudo adduser --gecos "" --home / --shell /bin/false --no-create-home --disabled-login txtrader
 	@set -e;\
         for package in $(REQUIRED_PACKAGES); do \
-	  dpkg -s >/dev/null $$package && echo verified package $$package || (echo missing package $$package; false);\
+	  sudo dpkg -s >/dev/null $$package && echo verified package $$package || (echo missing package $$package; false);\
 	done;
 	echo $(VENV)>etc/txtrader/TXTRADER_VENV
-	mkdir -p $(ENVDIR)
-	chmod 770 $(ENVDIR)
-	cp -r etc/txtrader/* $(ENVDIR)
-	chown -R txtrader.txtrader $(ENVDIR)
-	chmod 640 $(ENVDIR)/*
+	sudo mkdir -p $(ENVDIR)
+	sudo chmod 770 $(ENVDIR)
+	sudo cp -r etc/txtrader/* $(ENVDIR)
+	sudo chown -R txtrader.txtrader $(ENVDIR)
+	sudo chmod 640 $(ENVDIR)/*
 	touch .make-config
 
 testconfig:
@@ -80,7 +78,7 @@ testconfig:
 	fi;
 
 cleanup:
-	@if ps ax | egrep [d]efunct; then \
+	if ps ax | egrep [d]efunct; then \
 	  sudo pkill supervise;\
 	  sudo pkill multilog;\
 	  sudo kill $$(ps fax | awk '/[s]sh -v/{print $$1}');\

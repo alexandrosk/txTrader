@@ -201,20 +201,23 @@ class API_Symbol(object):
                 self.rawdata[k]=''
         self.cxn_init = None
   
-        # if this is a valid symbol
-        if self.api.enable_barchart:
+        # if this is a valid symbol and barchart is enabled, request an initial chart
+        if self.api.enable_barchart and not self.rawdata.get('SYMBOL_ERROR'):
  	    self.barchart_query('.', self.complete_barchart_init, self.barchart_init_failed)
         elif self.api.symbol_init(self):
             self.complete_symbol_init()
 
     def init_failed(self, error):
-        self.api.error_handler(repr(self), 'ERROR: Initial query failed for symbol %s', self.symbol)
+        self.api.error_handler(repr(self), 'ERROR: Initial query failed for symbol %s' % self.symbol)
 
     def barchart_query(self, start, callback, errback):
         self.api.query_bars(self.symbol, 1, start, '.', RTX_LocalCallback(self.api, callback, errback))
         
     def barchart_init_failed(self, error):
-        self.api.error_handler(repr(self), 'ERROR: Initial BARCHART query failed for symbol %s', self.symbol)
+        self.api.error_handler(repr(self), 'ERROR: Initial BARCHART query failed for symbol %s: %s' % (self.symbol, repr(error)))
+
+    def barchart_query_failed(self, error):
+        self.api.error_handler(repr(self), 'ERROR: BARCHART query failed for symbol %s: %s' % (self.symbol, repr(error)))
 
     def complete_barchart_init(self, bars):
         self.barchart_update(bars)
@@ -260,7 +263,7 @@ class API_Symbol(object):
             # don't request an update during the symbol init processing
             if self.api.enable_barchart and (not self.cxn_init):
                 # query a barchart update after each trade
- 	        self.barchart_query('-5', self.barchart_update)
+ 	        self.barchart_query('-5', self.barchart_update, self.barchart_query_failed)
 
         if 'HIGH_1' in data.keys():
             self.high = self.api.parse_tql_float(data['HIGH_1'], pid, 'HIGH_1')
@@ -306,10 +309,17 @@ class API_Symbol(object):
     def barchart_render(self):
         return [key.split(' ') + self.barchart[key] for key in sorted(self.barchart.keys())]
 
-    def barchart_update(self, bars):
-        for bar in json.loads(bars):
-            print('===barchart_update %s' % (repr(bar)))
-            self.barchart['%s %s' % (bar[0], bar[1])] = bar[2:]        
+    def barchart_update(self, bardata):
+        bars_found=False
+        if bardata:
+            bars = json.loads(bardata)
+            if bars:
+                for bar in bars:
+                    self.barchart['%s %s' % (bar[0], bar[1])] = bar[2:]        
+                    bars_found=True
+        if not bars_found:
+            self.api.error_handler(self.symbol, 'barchart_update: no bars found in %s' % repr(bardata))
+
 
 
 class API_Order(object):
@@ -1580,7 +1590,6 @@ class RTX(object):
         else:
             table = 'INTRADAY'
             interval = int(interval)
-
 
         session_start = datetime.datetime.strptime(self.symbols[symbol].rawdata['STARTTIME'], '%H:%M:%S')
         session_stop = datetime.datetime.strptime(self.symbols[symbol].rawdata['STOPTIME'], '%H:%M:%S')
