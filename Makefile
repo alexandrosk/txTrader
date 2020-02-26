@@ -49,7 +49,7 @@ config: .make-config
 	@getent >/dev/null passwd txtrader && echo "User txtrader exists." || adduser --gecos "" --home / --shell /bin/false --no-create-home --disabled-login txtrader
 	@set -e;\
         for package in $(REQUIRED_PACKAGES); do \
-	  dpkg-query >/dev/null -l $$package || false;\
+	  dpkg -s >/dev/null $$package && echo verified package $$package || (echo missing package $$package; false);\
 	done;
 	echo $(VENV)>etc/txtrader/TXTRADER_VENV
 	mkdir -p $(ENVDIR)
