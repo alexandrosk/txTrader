@@ -12,10 +12,8 @@ VENV = $(HOME)/venv/txtrader
 # modes: tws cqg rtx
 MODE=rtx
 
-# set account to AUTO for make testconfig to auto-set demo account
-TEST_HOST = 127.0.0.1
-TEST_PORT = 51070 
-TEST_ACCOUNT = $$(cat etc/txtrader/TXTRADER_API_ACCOUNT)
+TXTRADER_TEST_PORT=51070 
+TXTRADER_TEST_HOST=127.0.0.1
 
 default: install
 
@@ -58,23 +56,13 @@ config: .make-config
 
 testconfig:
 	@echo "Configuring test API..."
-	#$(MAKE) start
-	#sudo sh -c "echo $(TEST_PORT)>$(ENVDIR)/TXTRADER_API_PORT"
-	#sudo sh -c "echo $(TEST_ACCOUNT)>$(ENVDIR)/TXTRADER_API_ACCOUNT"
+	sudo sh -c "echo $(TXTRADER_TEST_HOST)>$(ENVDIR)/TXTRADER_API_HOST"
+	sudo sh -c "echo $(TXTRADER_TEST_PORT)>$(ENVDIR)/TXTRADER_API_PORT"
+	sudo sh -c "echo $(TXTRADER_TEST_ACCOUNT)>$(ENVDIR)/TXTRADER_API_ACCOUNT"
 	@echo -n "Restarting service..."
 	$(MAKE) restart
 	@while [ "$$(txtrader 2>/dev/null $(MODE) status)" != '"Up"' ]; do echo -n '.'; sleep 1; done;
 	@txtrader $(MODE) status
-	@if [ "$(TEST_ACCOUNT)" = "AUTO" ]; then\
-          echo -n "Getting account...";\
-	  while [ "$$(txtrader 2>/dev/null $(MODE) query_accounts)" = "[]" ]; do echo -n .;sleep 1; done;\
-	  echo OK;\
-	  export ACCOUNT="`txtrader $(MODE) query_accounts | tr -d \"[]\'\" | cut -d, -f1`";\
-	else\
-	  export ACCOUNT="$(TEST_ACCOUNT)";\
-	  echo "Setting test ACCOUNT=$$ACCOUNT";\
-	  sudo sh -c "echo $$ACCOUNT>$(ENVDIR)/TXTRADER_API_ACCOUNT";\
-	fi;
 
 cleanup:
 	if ps ax | egrep [d]efunct; then \
